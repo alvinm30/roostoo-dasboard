@@ -104,22 +104,6 @@
 
         <div class="space-y-4">
           <div class="card rounded-2xl p-4">
-            <h2 class="text-lg font-semibold mb-3">Quick Market Order</h2>
-            <div class="space-y-3">
-              <p class="text-xs muted">
-                Trading actions are disabled in this web dashboard (market orders not available).
-              </p>
-              <label class="block text-sm muted">Pair</label>
-              <select id="quickPair" disabled class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 opacity-60 cursor-not-allowed"></select>
-              <label class="block text-sm muted">Quantity</label>
-              <input id="quickQty" disabled type="number" min="0" step="any" placeholder="Enter quantity" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 mono opacity-60 cursor-not-allowed" />
-              <div class="grid grid-cols-2 gap-2">
-                <button id="buyBtn" disabled class="px-3 py-2 rounded-lg bg-emerald-600 opacity-50 cursor-not-allowed">BUY</button>
-                <button id="sellBtn" disabled class="px-3 py-2 rounded-lg bg-rose-600 opacity-50 cursor-not-allowed">SELL</button>
-              </div>
-            </div>
-          </div>
-          <div class="card rounded-2xl p-4">
             <h2 class="text-lg font-semibold mb-2">Pending & Trade Stats</h2>
             <p class="text-sm">Pending Orders: <span id="pendingCount" class="mono">-</span></p>
             <p class="text-sm">Total Trades: <span id="totalTrades" class="mono">-</span></p>
@@ -137,8 +121,7 @@
           <h2 class="text-lg font-semibold">Live & Historical Trades</h2>
           <div class="flex gap-2">
             <button id="refreshOrdersBtn" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600">Refresh Orders</button>
-            <button id="cancelAllBtn" class="px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-600">Cancel All Pending</button>
-          </div>
+            </div>
         </div>
         <div class="table-wrap">
           <table class="w-full text-sm">
@@ -211,7 +194,6 @@
         serverTime: document.getElementById("serverTime"),
         apiStatus: document.getElementById("apiStatus"),
         alertBox: document.getElementById("alertBox"),
-        quickPair: document.getElementById("quickPair"),
         initialWallet: document.getElementById("initialWallet"),
         portfolioValue: document.getElementById("portfolioValue"),
         portfolioPnlPct: document.getElementById("portfolioPnlPct"),
@@ -232,7 +214,6 @@
         lastOrderTime: document.getElementById("lastOrderTime"),
         lastFilledTime: document.getElementById("lastFilledTime"),
         ordersTableBody: document.getElementById("ordersTableBody"),
-        quickQty: document.getElementById("quickQty"),
         settingsModal: document.getElementById("settingsModal"),
         apiKeyInput: document.getElementById("apiKeyInput"),
         apiSecretInput: document.getElementById("apiSecretInput"),
@@ -363,7 +344,6 @@
         }
         const initialUsd = Number(res.InitialWallet?.USD ?? res.Data?.InitialWallet?.USD);
         state.apiInitialWallet = Number.isFinite(initialUsd) ? initialUsd : 1000000;
-        renderPairSelectors();
       }
 
       async function fetchTicker(pair) {
@@ -461,20 +441,6 @@
         state.orders = Array.isArray(rows) ? rows : [];
         renderOrders();
         computeTradeStats();
-      }
-
-      async function placeMarketOrder(side) {
-        const pair = el.quickPair.value;
-        const quantity = Number(el.quickQty.value);
-        if (!pair) throw new Error("Select a pair before placing an order.");
-        if (!(quantity > 0)) throw new Error("Quantity must be greater than zero.");
-        await requestSigned("/v3/place_order", "POST", {
-          pair,
-          side,
-          type: "MARKET",
-          quantity,
-        });
-        await Promise.all([fetchPendingCount(), fetchOrders(200), fetchBalances()]);
       }
 
       async function cancelOrder(orderId) {
@@ -627,15 +593,6 @@
         const lastFilled = filledOnly.reduce((m, o) => (o.finishedTs > m ? o.finishedTs : m), 0) || 0;
         el.lastOrderTime.textContent = formatTs(lastCreated);
         el.lastFilledTime.textContent = formatTs(lastFilled);
-      }
-
-      function renderPairSelectors() {
-        const options = state.pairs.map((p) => `<option value="${p}">${p}</option>`).join("");
-        el.quickPair.innerHTML = options;
-        if (!state.chartPair || !state.pairs.includes(state.chartPair)) {
-          state.chartPair = state.pairs[0];
-        }
-        el.quickPair.value = state.chartPair;
       }
 
       function upsertCandlePoint(ts, price) {
